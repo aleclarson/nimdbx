@@ -43,7 +43,7 @@ type
         ## A callback given to an IndexFunc, to be called by that function for each entry to add
         ## to the index.
 
-    IndexFunc* = proc(value: DataOut, emit: EmitFunc) {.noSideEffect.}
+    IndexFunc* = proc(key: DataOut, value: DataOut, emit: EmitFunc) {.noSideEffect.}
         ## A user-supplied function that's given a value from the source Collection
         ## and calls the `emit` function zero or more times with a key and value to be indexed.
         ## (Note that multiple keys/values may be indexed.)
@@ -69,7 +69,7 @@ proc updateEntry(ind: Index; txn: ptr MDBX_txn; key, oldValue, newValue: MDBX_va
             let collKey = ind.collatableKey(key)
 
             proc callIndexFunc(val: MDBX_val, isNew: bool) =
-                ind.indexer(DataOut(val: val)) do (indexKey, indexValue: sink Collatable):
+                ind.indexer(DataOut(val: key), DataOut(val: val)) do (indexKey, indexValue: sink Collatable):
                     let indexValue = indexValue & collKey
                     if isNew:
                         discard ct.insert(indexKey, indexValue)
@@ -95,7 +95,7 @@ proc rebuild*(ind: Index) =
     ind.index.inTransaction do (ct: CollectionTransaction):
         ct.delAll()
         for key, val in ind.source.with(ct.snapshot):
-            ind.indexer(val) do (indexKey, indexValue: sink Collatable):
+            ind.indexer(key, val) do (indexKey, indexValue: sink Collatable):
                 let indexValue = indexValue & ind.collatableKey(key)
                 discard ct.insert(indexKey, indexValue)
         ct.commit()
