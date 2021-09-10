@@ -157,3 +157,7 @@ proc deleteIndex*(idx: Index) =
     idx.index.inTransaction do (ct: CollectionTransaction):
         ct.deleteCollection()
         ct.commit
+
+proc deleteIndex*(idx: Index, transaction: Transaction) =
+    idx.indexer = nil
+    idx.index.with(transaction).deleteCollection()
